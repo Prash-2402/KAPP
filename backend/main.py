@@ -1,13 +1,9 @@
-from fastapi import FastAPI, UploadFile, File, Form
+from fastapi import FastAPI, UploadFile, File
 from fastapi.middleware.cors import CORSMiddleware
-from roles import ROLES
-from utils import extract_text, extract_skills, calculate_missing
+from utils import extract_text, extract_skills
 from orchestrator import run_orchestrator
-import logging
 
 app = FastAPI()
-
-logging.basicConfig(level=logging.INFO)
 
 app.add_middleware(
     CORSMiddleware,
@@ -16,27 +12,23 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
-@app.get("/roles/")
-def get_roles():
-    return list(ROLES.keys())
+@app.get("/")
+def root():
+    return {"message": "Career Intelligence Engine Running"}
 
 @app.post("/analyze/")
-async def analyze(file: UploadFile = File(...), role: str = Form(...)):
-
-    if role not in ROLES:
-        return {"error": "Invalid role selected"}
+async def analyze(file: UploadFile = File(...)):
 
     text = extract_text(file)
-    user_skills = extract_skills(text)
-    required = ROLES.get(role, [])
-    missing = calculate_missing(required, user_skills)
 
-    ai_result = run_orchestrator(role, user_skills, required, missing)
+    if not text:
+        return {"error": "Unable to extract text from resume."}
 
-    logging.info(f"Role: {role}, Score: {ai_result['risk_score']}")
+    skills, frequency = extract_skills(text)
+
+    ai_result = run_orchestrator(skills, frequency)
 
     return {
-        "detected_skills": user_skills,
-        "missing_skills": missing,
-        "ai": ai_result
+        "detected_skills": skills,
+        "analysis": ai_result
     }
