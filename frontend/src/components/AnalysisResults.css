@@ -303,11 +303,13 @@
     font-family: var(--font-display);
     font-size: 3rem;
     font-weight: 900;
-    background: linear-gradient(135deg, var(--sand-gold), var(--spice-orange));
+    color: var(--neon-teal);
+    background: linear-gradient(135deg, var(--neon-teal), var(--electric-blue));
     -webkit-background-clip: text;
     -webkit-text-fill-color: transparent;
     background-clip: text;
     line-height: 1;
+    filter: drop-shadow(0 0 15px rgba(0, 255, 209, 0.5));
 }
 
 .week-label {
