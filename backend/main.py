@@ -26,43 +26,54 @@ async def analyze(file: UploadFile = File(...)):
     # Step 1: Extract text from PDF
     file_content = await file.read() # Read once
     
-    # Create a new UploadFile-like object for utils (since we read the stream)
-    from fastapi import UploadFile
+    # Mimic file for utils
     import io
+    file.file = io.BytesIO(file_content)
     
-    # Reset pointer on the original file object if needed, but we have bytes now.
-    # We can pass a mock or modify utils to accept bytes. 
-    # EASIER: Just modify utils logic inline or re-wrap.
-    # Actually, let's use the utils function but we need to handle the stream consumption.
-    
-    # Re-wrap for compatibility
-    file.file.seek(0) 
+    # Try local extraction
     text = extract_text(file)
     
+    # Step 2: Initial Skill Detection
+    print("🔍 Initial Skill Check...")
+    skills = []
+    if text:
+        skills, _ = extract_skills(text)
+    
     # AI OCR FALLBACK 👁️
-    if not text or len(text.strip()) < 50:
-        print("⚠️  Local extraction failed/empty. Attempting AI OCR fallback...")
-        from ai_client import ai_client
+    # Trigger if verify specific conditions:
+    # 1. Text is empty/short
+    # 2. OR very few skills detected (likely garbage text)
+    if not text or len(text.strip()) < 50 or len(skills) < 3:
+        print(f"⚠️  Quality Check Failed: TextLen={len(text) if text else 0}, Skills={len(skills)}")
+        print("🔄 Attempting AI OCR fallback...")
+        
         try:
             from ai_client import ai_client
-            # Pass raw bytes to Gemini
             ocr_text = ai_client.extract_text_from_pdf(file_content)
             
             if ocr_text:
                 text = ocr_text
-                print("✅ Fallback to AI Text successful")
+                print(f"✅ Fallback to AI Text successful. New length: {len(text)}")
+                
+                # Re-extract skills with better text
+                skills, _ = extract_skills(text)
+                print(f"🔍 Re-check Skills: Found {len(skills)}")
+            else:
+                 print("⚠️ AI OCR returned None/Empty.")
+                 
         except Exception as e:
             print(f"❌ AI OCR Fallback failed: {e}")
     
-    if not text:
+    # Final check on text
+    if not text or len(text.strip()) < 10:
         return {"error": "Unable to extract text from resume. Please ensure it's a valid PDF."}
-    
-    # Step 2: Extract structured sections
+
+    # Step 3: Extract structured sections (Now that we have best possible text)
     print("📄 Extracting resume sections...")
     sections = extract_resume_sections(text)
     
-    # Step 3: Extract skills
-    print("🔍 Detecting skills...")
+    # Step 4: Final Skills Extraction (if not already done or to get frequency)
+    print("🔍 Finalizing skills...")
     skills, frequency = extract_skills(text)
     
     # Step 4: Analyze projects

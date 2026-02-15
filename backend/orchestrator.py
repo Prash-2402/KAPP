@@ -60,6 +60,11 @@ def detect_best_role(user_skills):
         role_scores[role] = len(set(user_skills) & set(required))
 
     best_role = max(role_scores, key=role_scores.get)
+    
+    # Safety: If all scores are 0, return "General Software Engineer"
+    if role_scores[best_role] == 0:
+        return "General Software Engineer", role_scores
+
     return best_role, role_scores
 
 
@@ -73,6 +78,11 @@ def detect_strong_domain(user_skills):
         domain_scores[domain] = len(set(user_skills) & set(skills))
 
     strongest_domain = max(domain_scores, key=domain_scores.get)
+    
+    # Safety: If all scores are 0, return "General Tech"
+    if domain_scores[strongest_domain] == 0:
+        return "General Technology", domain_scores
+        
     return strongest_domain, domain_scores
 
 

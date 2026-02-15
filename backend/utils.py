@@ -95,4 +95,7 @@ def extract_skills(text):
             detected.add(skill)
             frequency[skill] = count
 
+    if len(detected) == 0:
+        print("⚠️ Warning: No skills detected! Check OCR quality or SKILLS_LIST.")
+
     return list(detected), frequency
