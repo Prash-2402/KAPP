@@ -157,6 +157,49 @@ Do not include any explanation or markdown formatting. Just the raw JSON."""
             return None
 
 
+
+    def extract_text_from_pdf(self, pdf_bytes: bytes) -> Optional[str]:
+        """
+        Extract text from PDF using Gemini's multimodal capabilities (OCR).
+        Useful for image-based/scanned resumes where PyPDF2 fails.
+        """
+        if not self.is_available():
+            print("⚠️  AI not available for OCR fallback")
+            return None
+
+        try:
+            print("👁️ Using Gemini Vision for Resume OCR...")
+            
+            prompt = """
+            You are a precise OCR engine. 
+            Extract ALL text from this resume document verbatim.
+            Do not summarize. Do not format. Just return the raw text content.
+            If the document is empty or unreadable, return nothing.
+            """
+            
+            response = self._client.models.generate_content(
+                model=GEMINI_MODEL,
+                contents=[
+                    prompt,
+                    genai.types.Part.from_bytes(data=pdf_bytes, mime_type="application/pdf")
+                ],
+                config=GenerateContentConfig(
+                    temperature=0.0,
+                    max_output_tokens=8192
+                )
+            )
+            
+            if response.text:
+                print(f"✅ Gemini OCR successful: {len(response.text)} chars")
+                return response.text.strip()
+            
+            return None
+            
+        except Exception as e:
+            print(f"❌ Gemini OCR failed: {e}")
+            return None
+
+
 # Global instance
 ai_client = AIClient()
 
